@@ -78,7 +78,14 @@ def modify_transaction_date(df):
             'Invoice ID': 421,
             'Payment Line': 1,
             'Retroactive Transaction Date': '1/16/2019 12:00:00 AM',
-        }      
+        }
+        ,
+        'University of Louisiana at Lafayette':
+        {
+            'Invoice ID': 347,
+            'Payment Line': 1,
+            'Retroactive Transaction Date': '7/31/2018 12:00:00 AM',
+        }            
     }
 
     for institution in retroactive_transactions.keys():

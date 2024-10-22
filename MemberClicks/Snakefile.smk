@@ -1,7 +1,7 @@
-# define dates of exports from memberclicks (YYMMDD)
-transaction_export_date = '241015'
-institutions_export_date = '241015'
-representatives_export_date = '241015'
+# define dates of transaction exports from memberclicks (YYMMDD)
+transaction_export_date = '241021'
+# along with todays date for profile exports done in background (YYMMDD)
+profile_export_date = '241022'
 
 # information on rep status export
 # active: paid dues this current year
@@ -10,10 +10,12 @@ representatives_export_date = '241015'
 member_statuses = ['active','lapsed']
 
 
-# the final target of the pipeline is a list of reps grouped by their member status
+# the final targets of the pipeline are a list of reps grouped by their member status, 
+# along with a heatmap of payments across institutions over time
 rule all:
 	input:
-		expand(f'07_munge_representatives/out/{transaction_export_date}_{{member_status}}_representatives_list.csv',member_status = member_statuses)
+		expand(f'07_munge_representatives/out/{profile_export_date}_{{member_status}}_representatives_list.csv',member_status = member_statuses),
+		f'05_visualize_transactions/out/{transaction_export_date}_membership_payments.pdf'
 
 ################################# FETCHING #########################################
 
@@ -23,29 +25,29 @@ rule all:
 # input files are raw exports from memberclicks, this is all done manually and stored in
 # ./02_clean/src/in location
 
+rule fetch_memberclicks_profiles:
+	output:
+		out_filename = f'01_fetch/tmp/{profile_export_date}_profile_export.csv'
+	script:
+		'01_fetch/src/fetch_memberclicks_profiles.py'
+
 ################################# CLEANING #########################################
 
-# mostly changing/dropping column names from raw memberclicks export
+# mostly changing/dropping column names from raw memberclicks export; 
+# also filtering profiles from MC by representatives and institutions
 
-# in the clean_transaction_report step I add a column for payment line as the transaction export 
+# Lastly in the clean_transaction_report step I add a column for payment line as the transaction export 
 # only reports invoice number. This is useful as many multi year payments are included in the same 
 # invoice but different payment lines. 
 
-rule clean_institutions_export:
+rule filter_profiles:
 	input:
-		in_filename = f'02_clean/in/{institutions_export_date}_institutions_export.csv'
+		in_filename = f'01_fetch/tmp/{profile_export_date}_profile_export.csv'
 	output:
-		out_filename = '02_clean/tmp/cleaned_institutions_list.csv'
+		out_filename_representatives = '02_clean/tmp/cleaned_representatives_list.csv',
+		out_filename_institutions = '02_clean/tmp/cleaned_institutions_list.csv'
 	script:
-		'02_clean/src/clean_institutions_export.py'
-
-rule clean_representatives_export:
-	input:
-		in_filename = f'02_clean/in/{representatives_export_date}_representatives_export.csv'
-	output:
-		out_filename = '02_clean/tmp/cleaned_representatives_list.csv'
-	script:
-		'02_clean/src/clean_representatives_export.py'
+		'02_clean/src/filter_profiles.py'
 
 rule clean_transaction_report:
 	input:
@@ -58,7 +60,8 @@ rule clean_transaction_report:
 ################################# MUNGING #########################################
 
 # include payments/waivers done outside of MemberClicks; can also modify date for transactions
-# done retroactively
+# done retroactively (the latter in modify_payments.py and hardcoded into modify_transaction_date
+# function)
 
 # joining member type information from institution profile list to transaction report
 
@@ -151,9 +154,15 @@ rule spread_payments:
 
 ############################ VISUALIZE TRANSACTIONS #######################################
 
-# this folder is a placeholder for the moment for generating heatmap of transaction data
-# across institutions over time
+# generating heatmap of payments across institutions over time
 
+rule visualize_transactions:
+	input:
+		in_filename = f'04_process_transactions/out/{transaction_export_date}_membership_payments.csv'
+	output:
+		out_filename = f'05_visualize_transactions/out/{transaction_export_date}_membership_payments.pdf'
+	script:
+		'05_visualize_transactions/src/generate_heatmap.py'
 
 
 ########################### INSTITIUTION MUNGING #########################################
@@ -190,6 +199,6 @@ rule get_representatives_lists:
 		in_institutions_filename = f'06_munge_institutions/tmp/{transaction_export_date}_{{member_status}}_institutions_list.csv',
 		in_representatives_filename = '02_clean/tmp/cleaned_representatives_list.csv'
 	output:
-		out_representatives_filename = f'07_munge_representatives/out/{transaction_export_date}_{{member_status}}_representatives_list.csv'
+		out_representatives_filename = f'07_munge_representatives/out/{profile_export_date}_{{member_status}}_representatives_list.csv'
 	script:
 		'07_munge_representatives/src/get_representatives_lists.py'

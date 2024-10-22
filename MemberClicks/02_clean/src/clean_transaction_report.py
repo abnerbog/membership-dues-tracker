@@ -1,4 +1,5 @@
 import pandas as pd
+import clean_helpers
 
 def read_input_file(in_file):
     
@@ -6,7 +7,18 @@ def read_input_file(in_file):
 
     return df
 
-def remove_columns(df):
+def add_payment_line(df):
+
+    # group by invoice ID and assign a sequential number to each payment line
+    df['Payment Line'] = df.groupby('Invoice ID').cumcount() + 1
+    
+    return df
+
+def save_output_file(df,out_file):
+    
+    df.to_csv(out_file,index=False)
+    
+def main(in_file,out_file):
 
     columns_to_remove = ['Transaction Type',
                          'Payment Method',
@@ -19,47 +31,16 @@ def remove_columns(df):
                          'Debit Account',
                          'First Name',
                          'Last Name']
+  
+    df = read_input_file(in_file) 
 
-    df = df.drop(columns=columns_to_remove)
+    print(df.columns)
 
-    return df
+    df_cleaned = clean_helpers.remove_columns(df,columns_to_remove)
 
-def add_payment_line(df):
+    df_cleaned = add_payment_line(df_cleaned)
 
-    # group by invoice ID and assign a sequential number to each payment line
-    df['Payment Line'] = df.groupby('Invoice ID').cumcount() + 1
-    
-    return df
-
-def modify_institution_names(df):
-
-    # remove special unicode characters
-    df['Company'] = df['Company'].str.encode('utf-8').str.decode('ascii', 'ignore')
-
-    # create dictionary of instituion values to be updated
-    # note we are treating UNC system as one institution (as opposed to segmenting by campus (e.g. Chapel Hill))
-    replace_vals = {
-        'University of North Carolina': 'University of North Carolina System'
-        }
-    
-    # update institution names
-    df['Company'] = df['Company'].replace(replace_vals)
-
-    return df
-
-def save_output_file(df,out_file):
-    
-    df.to_csv(out_file,index=False)
-    
-def main(in_file,out_file):
-    
-    df = read_input_file(in_file)
-
-    df_cleaned = modify_institution_names(df)
-
-    df_cleaned = add_payment_line(df_cleaned)  
-    
-    df_cleaned = remove_columns(df_cleaned)
+    df_cleaned = clean_helpers.modify_institution_names(df_cleaned,'Company')
 
     save_output_file(df_cleaned,out_file)
 

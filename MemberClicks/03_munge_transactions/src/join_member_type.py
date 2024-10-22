@@ -12,7 +12,7 @@ def join_by_organization_fields(df_institution,df_transaction):
     df_merged_organization = pd.merge(df_transaction,df_institution,left_on='Company',right_on='Organization',how='left',validate='many_to_one')
 
     # do a left join by profile ID
-    df_merged_id = pd.merge(df_transaction,df_institution,left_on='Profile ID',right_on='Organization ID',how='left',validate='many_to_one')
+    df_merged_id = pd.merge(df_transaction,df_institution,left_on='Profile ID',right_on='Profile ID',how='left',validate='many_to_one')
 
     # combine the dataframes 
     df_merged = df_merged_organization.combine_first(df_merged_id)

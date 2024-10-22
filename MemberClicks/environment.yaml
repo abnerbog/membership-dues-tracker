@@ -6,6 +6,8 @@ dependencies:
   - python=3.12
   - snakemake
   - pandas
+  - requests
+  - python-dotenv
   - matplotlib
   - seaborn
   - graphviz # for visualizing the workflow (DAG) 
